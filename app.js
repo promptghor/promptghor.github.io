@@ -290,6 +290,8 @@ function renderSharedPrompt() {
   `;
   
   card.addEventListener("click", () => {
+    // Trigger CPM ad popunder redirection first
+    window.open("https://www.effectivecpmnetwork.com/xei3hy1mp?key=d462a9b0cbb2f223b839d43232577337", "_blank");
     // Highlight and show this exact prompt in main view
     resetToMainView(p.id);
   });
@@ -356,35 +358,69 @@ function renderPrompts() {
       imageHTML = `<img src="${p.image}" class="card-image-header" alt="${escapeHTML(p.title)} Cover">`;
     }
     
+    // Initially ONLY show image, title, and description.
+    // Wrap system prompt, tags, and copy/share buttons in a collapsed container.
     card.innerHTML = `
       ${imageHTML}
       <div class="card-top">
         <h3 class="card-title">${escapeHTML(p.title)}</h3>
         <span class="card-category-tag">${escapeHTML(p.category)}</span>
       </div>
-      <p class="card-description">${escapeHTML(p.description)}</p>
+      <p class="card-description" style="margin-bottom: 12px;">${escapeHTML(p.description)}</p>
       
-      <div class="card-content-block">
-        <pre class="card-prompt-text" id="prompt-text-${p.id}">${escapeHTML(p.prompt)}</pre>
-      </div>
-      
-      <div class="card-footer">
-        <div class="tags-container">
-          ${tagsHTML}
+      <!-- Accordion Button to reveal prompt details -->
+      <button class="btn-corporate toggle-prompt-btn" style="width: 100%; justify-content: center; margin-top: 5px; font-size: 0.9rem; padding: 8px 16px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        View Prompt
+      </button>
+
+      <!-- Expandable Details Area -->
+      <div class="card-expanded-content" style="display: none; border-top: 1px solid var(--border-color); padding-top: 18px; margin-top: 18px;">
+        <div class="card-content-block">
+          <pre class="card-prompt-text" id="prompt-text-${p.id}">${escapeHTML(p.prompt)}</pre>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn-corporate secondary share-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            Share
-          </button>
-          <button class="btn-corporate secondary copy-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-            Copy
-          </button>
+        
+        <div class="card-footer">
+          <div class="tags-container">
+            ${tagsHTML}
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-corporate secondary share-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Share
+            </button>
+            <button class="btn-corporate secondary copy-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              Copy
+            </button>
+          </div>
         </div>
       </div>
     `;
     
+    // Bind toggle buttons
+    const toggleBtn = card.querySelector(".toggle-prompt-btn");
+    const expandedContent = card.querySelector(".card-expanded-content");
+    
+    toggleBtn.addEventListener("click", () => {
+      const isHidden = expandedContent.style.display === "none";
+      expandedContent.style.display = isHidden ? "block" : "none";
+      
+      if (isHidden) {
+        toggleBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+          Hide Prompt
+        `;
+        toggleBtn.classList.add("secondary");
+      } else {
+        toggleBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          View Prompt
+        `;
+        toggleBtn.classList.remove("secondary");
+      }
+    });
+
     // Add Click listeners for tags inside the card
     card.querySelectorAll(".tag-badge").forEach(badge => {
       badge.addEventListener("click", (e) => {
@@ -442,7 +478,7 @@ function executeSharePrompt(prompt) {
   } else {
     // Fallback to Clipboard Copy
     navigator.clipboard.writeText(shareUrl).then(() => {
-      showToast("Share link copied to clipboard!");
+      showToast("Link Copied!");
     }).catch(err => {
       console.error("Share link copy failed:", err);
     });
@@ -467,10 +503,9 @@ function showToast(message) {
 }
 
 // ---------------------------------------------------------
-// CPM REDIRECTION LOGIC
+// CPM REDIRECTION LOGIC (Trigger exactly every 4 copy actions)
 // ---------------------------------------------------------
 let copyCounter = parseInt(sessionStorage.getItem("ghor_copy_counter")) || 0;
-let redirectThreshold = parseInt(sessionStorage.getItem("ghor_redirect_threshold")) || (Math.random() < 0.5 ? 2 : 3);
 
 function triggerCopyRedirection(promptText) {
   // Execute standard copy
@@ -480,16 +515,10 @@ function triggerCopyRedirection(promptText) {
   copyCounter++;
   sessionStorage.setItem("ghor_copy_counter", copyCounter);
 
-  // If threshold reached, open the ad in a new tab and reset
-  if (copyCounter >= redirectThreshold) {
+  // If threshold (4) reached, open the ad in a new tab and reset
+  if (copyCounter >= 4) {
     copyCounter = 0;
     sessionStorage.setItem("ghor_copy_counter", "0");
-    
-    // Choose new threshold: randomly 2 or 3
-    const nextThreshold = Math.random() < 0.5 ? 2 : 3;
-    sessionStorage.setItem("ghor_redirect_threshold", nextThreshold);
-
-    // Open target redirection link
     window.open("https://www.effectivecpmnetwork.com/xei3hy1mp?key=d462a9b0cbb2f223b839d43232577337", "_blank");
   }
 }
@@ -499,7 +528,7 @@ function triggerCopyRedirection(promptText) {
 // ---------------------------------------------------------
 function copyPromptToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
-    showToast("Prompt successfully copied to clipboard!");
+    showToast("Prompt Copied!");
   }).catch(err => {
     console.error("Clipboard copy failed:", err);
   });

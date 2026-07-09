@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROMPT HUB // Enterprise Prompt Library</title>
+  <meta name="description" content="A professional and sleek prompt sharing repository. Search, copy, and organize engineering prompts with real-time updates.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- App Main Layout Container -->
+  <div class="app-container">
+    <!-- Corporate Header Area -->
+    <header class="corporate-header" id="main-header">
+      <div class="brand-section">
+        <div class="brand-logo-red"></div>
+        <div>
+          <h1 class="corporate-title">PROMPT <span>HUB</span></h1>
+          <div class="corporate-subtitle">Enterprise Cognitive Asset Repository</div>
+        </div>
+      </div>
+      <div class="actions-section">
+        <!-- Light/Dark Switch Toggle -->
+        <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Light/Dark Theme">
+          <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <a href="admin.html" class="btn-corporate" id="btn-admin-portal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Admin Console
+        </a>
+      </div>
+    </header>
+
+    <!-- Control Area (Search Input) -->
+    <section class="search-container" id="search-section">
+      <div class="search-icon-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
+      <input type="text" id="prompt-search-input" class="corporate-search-input" placeholder="Search prompts by title, content, or tags..." autocomplete="off">
+    </section>
+
+    <!-- Categories Filters -->
+    <nav class="category-nav" id="category-filters-container" aria-label="Category Navigation">
+      <button class="category-pill active" data-category="ALL" id="cat-tab-all">All Prompts</button>
+      <!-- Dynamically rendering pills -->
+    </nav>
+
+    <!-- Main Workspace Grid -->
+    <main class="dashboard-grid" id="main-grid-layout">
+      <!-- Prompts Gallery List -->
+      <section class="prompts-list" id="prompts-gallery" aria-label="Prompts Gallery">
+        <div class="no-records" id="gallery-loading-placeholder">
+          Loading cognitive assets from database...
+        </div>
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="sidebar-panel" id="dashboard-sidebar">
+        <!-- Tag Filter Widget -->
+        <div class="sidebar-card" id="tags-cloud-widget">
+          <h2 class="sidebar-title">Filter by Tags</h2>
+          <div class="tag-cloud" id="tags-cloud-container">
+            <!-- Dynamically rendering tags -->
+          </div>
+        </div>
+
+        <!-- Database Metrics Widget -->
+        <div class="sidebar-card" id="system-stats-widget">
+          <h2 class="sidebar-title">Database Status</h2>
+          <div class="stat-row">
+            <span class="stat-label">Connection Mode</span>
+            <span class="stat-value" id="stat-connection-state">Active</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Active Prompts</span>
+            <span class="stat-value highlight" id="stat-prompts-count">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Total Categories</span>
+            <span class="stat-value" id="stat-categories-count">0</span>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Clipboard Copy Alert Banner -->
+  <div id="copy-banner" class="copy-banner" role="status">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    Prompt successfully copied to clipboard!
+  </div>
+
+  <!-- Web Application Scripts -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

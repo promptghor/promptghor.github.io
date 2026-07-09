@@ -1,0 +1,12 @@
+{
+  "name": "prompt-box-hacker",
+  "version": "1.0.0",
+  "description": "Red Hacking Theme Prompt Box Shared Repository",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}

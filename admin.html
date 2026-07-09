@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADMIN CONSOLE // Manage Prompts</title>
+  <meta name="description" content="Secure administrative panel to create, read, update, and delete prompts from the corporate database.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- CRT frame elements deleted for corporate style -->
+  <!-- Admin Console Workspace -->
+  <div class="app-container" id="admin-workspace">
+    <!-- Admin Header -->
+    <header class="corporate-header" id="admin-header">
+      <div class="brand-section">
+        <div class="brand-logo-red"></div>
+        <div>
+          <h1 class="corporate-title">ADMIN <span>CONSOLE</span></h1>
+          <div class="corporate-subtitle">Database Schema Management</div>
+        </div>
+      </div>
+      <div class="actions-section">
+        <!-- Light/Dark Switch Toggle -->
+        <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Light/Dark Theme">
+          <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <a href="index.html" class="btn-corporate secondary" id="btn-client-terminal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Client View
+        </a>
+      </div>
+    </header>
+
+    <!-- Admin Panel Layout Grid -->
+    <main class="admin-grid" id="admin-grid-layout">
+      <!-- CRUD Editor Form -->
+      <section class="admin-form-panel" id="data-editor-container">
+        <h2 class="sidebar-title" id="form-widget-title">Inject Cognitive Asset</h2>
+        <form id="prompt-crud-form" onsubmit="return false;">
+          <input type="hidden" id="prompt-id-field" value="">
+          
+          <div class="form-group">
+            <label for="prompt-title-field" class="form-label">Asset Title</label>
+            <input type="text" id="prompt-title-field" class="form-input" placeholder="e.g. SQL Injection Guard" required autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="prompt-category-field" class="form-label">Category</label>
+            <input type="text" id="prompt-category-field" class="form-input" placeholder="e.g. Coding, Graphics, Copywriting" list="existing-categories" required autocomplete="off">
+            <datalist id="existing-categories">
+              <!-- Dynamically populated categories -->
+            </datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="prompt-tags-field" class="form-label">Tags (comma-separated)</label>
+            <input type="text" id="prompt-tags-field" class="form-input" placeholder="e.g. security, backend, database" required autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="prompt-desc-field" class="form-label">Asset Description</label>
+            <textarea id="prompt-desc-field" class="form-input" rows="3" placeholder="Briefly summarize this prompt's function..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="prompt-content-field" class="form-label">System Prompt Content</label>
+            <textarea id="prompt-content-field" class="form-input" rows="8" placeholder="Enter the complete instructions / system prompt here..." required></textarea>
+          </div>
+
+          <div class="form-actions-group">
+            <button type="submit" id="prompt-submit-btn" class="btn-corporate">Inject Prompt</button>
+            <button type="button" id="prompt-clear-btn" class="btn-corporate secondary">Flush Form</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Prompt List Index Table -->
+      <section class="admin-list-panel" id="database-index-container">
+        <h2 class="sidebar-title">Active Prompt Index</h2>
+        <div class="table-wrapper">
+          <table class="corporate-table" id="admin-prompts-table">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 40%;">Prompt details</th>
+                <th scope="col" style="width: 20%;">Category</th>
+                <th scope="col" style="width: 25%;">Tags</th>
+                <th scope="col" style="width: 15%;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-prompts-tbody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                  Connecting to active schema records...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Web Application Scripts -->
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

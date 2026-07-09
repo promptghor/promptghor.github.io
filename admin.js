@@ -6,6 +6,7 @@ import { initializeDatabase, subscribeToPrompts, pushPrompt, updatePrompt, delet
 let allPrompts = [];
 let dbInfo = null;
 let editingPromptId = null;
+let currentBase64Image = "";
 
 // DOM Elements - Gatekeeper Screen (Loaded on DOMContentLoaded)
 let gatekeeperScreen;
@@ -27,6 +28,8 @@ let clearBtn;
 let formWidgetTitle;
 let promptsTbody;
 let categoriesDatalist;
+let imageField;
+let imagePreview;
 
 // Helper to escape HTML characters
 function escapeHTML(str) {
@@ -160,6 +163,8 @@ window.addEventListener("DOMContentLoaded", () => {
   formWidgetTitle = document.getElementById("form-widget-title");
   promptsTbody = document.getElementById("admin-prompts-tbody");
   categoriesDatalist = document.getElementById("existing-categories");
+  imageField = document.getElementById("prompt-image-field");
+  imagePreview = document.getElementById("image-preview");
 
   // Init themes
   initTheme();
@@ -179,6 +184,31 @@ window.addEventListener("DOMContentLoaded", () => {
     bypassCodeInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         checkBypassCode();
+      }
+    });
+  }
+
+  // File Upload listener (Base64 conversion)
+  if (imageField) {
+    imageField.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        // Prevent files that are too large (limit to 1MB to avoid database bloat)
+        if (file.size > 1024 * 1024) {
+          alert("[CRITICAL] File size exceeds 1MB limit. Please compress your image first.");
+          imageField.value = "";
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentBase64Image = event.target.result;
+          if (imagePreview) {
+            imagePreview.src = currentBase64Image;
+            imagePreview.style.display = "block";
+          }
+        };
+        reader.readAsDataURL(file);
       }
     });
   }
@@ -205,7 +235,8 @@ window.addEventListener("DOMContentLoaded", () => {
         category,
         tags,
         description,
-        prompt: promptText
+        prompt: promptText,
+        image: currentBase64Image // Insert the base64 cover image string
       };
 
       try {
@@ -236,6 +267,12 @@ function resetForm() {
   if (tagsField) tagsField.value = "";
   if (descField) descField.value = "";
   if (contentField) contentField.value = "";
+  if (imageField) imageField.value = "";
+  if (imagePreview) {
+    imagePreview.src = "";
+    imagePreview.style.display = "none";
+  }
+  currentBase64Image = "";
   
   editingPromptId = null;
   if (submitBtn) submitBtn.textContent = "Inject Prompt";
@@ -305,6 +342,17 @@ function loadPromptToForm(prompt) {
   if (tagsField) tagsField.value = (prompt.tags || []).join(", ");
   if (descField) descField.value = prompt.description;
   if (contentField) contentField.value = prompt.prompt;
+  
+  currentBase64Image = prompt.image || "";
+  if (imagePreview) {
+    if (currentBase64Image) {
+      imagePreview.src = currentBase64Image;
+      imagePreview.style.display = "block";
+    } else {
+      imagePreview.src = "";
+      imagePreview.style.display = "none";
+    }
+  }
   
   editingPromptId = prompt.id;
   if (submitBtn) submitBtn.textContent = "Update Prompt";

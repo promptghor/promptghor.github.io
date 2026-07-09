@@ -10,12 +10,19 @@ let activeTag = null;
 let searchQuery = "";
 let dbInfo = null;
 
+// Share Mode State
+let shareModeActive = false;
+let sharedPromptId = null;
+
 // DOM Elements (Loaded on DOMContentLoaded)
 let promptsGallery;
 let categoryFiltersContainer;
 let tagsCloudContainer;
 let searchInput;
 let copyBanner;
+let searchSection;
+let categoryNav;
+let dashboardSidebar;
 
 // Stats Elements
 let statPromptCount;
@@ -43,7 +50,6 @@ function initTheme() {
   
   if (!themeToggleBtn) return;
   
-  // Set light theme as the default preference
   const savedTheme = localStorage.getItem("corporate_theme") || "light";
   
   const applyTheme = (theme) => {
@@ -58,10 +64,8 @@ function initTheme() {
     }
   };
   
-  // Apply initial theme
   applyTheme(savedTheme);
   
-  // Bind click listener
   themeToggleBtn.addEventListener("click", () => {
     const isLight = document.body.classList.toggle("light-theme");
     const currentTheme = isLight ? "light" : "dark";
@@ -83,9 +87,33 @@ async function init() {
   statPromptCount = document.getElementById("stat-prompts-count");
   statCategoryCount = document.getElementById("stat-categories-count");
   statConnectionState = document.getElementById("stat-connection-state");
+  
+  // Layout wrappers to hide in share mode
+  searchSection = document.getElementById("search-section");
+  categoryNav = document.getElementById("category-filters-container");
+  dashboardSidebar = document.getElementById("dashboard-sidebar");
 
   // Init theme toggle
   initTheme();
+  
+  // Check for shared prompt parameter in URL (?p=PROMPT_ID)
+  const urlParams = new URLSearchParams(window.location.search);
+  const shareId = urlParams.get("p");
+  if (shareId) {
+    shareModeActive = true;
+    sharedPromptId = shareId;
+    
+    // Hide standard elements for share view
+    if (searchSection) searchSection.style.display = "none";
+    if (categoryNav) categoryNav.style.display = "none";
+    if (dashboardSidebar) dashboardSidebar.style.display = "none";
+    
+    // Force grid to single column layout
+    const gridLayout = document.getElementById("main-grid-layout");
+    if (gridLayout) {
+      gridLayout.style.gridTemplateColumns = "1fr";
+    }
+  }
   
   // Bind search input listener
   if (searchInput) {
@@ -103,7 +131,7 @@ async function init() {
 
     // Update connection indicator
     if (statConnectionState) {
-      statConnectionState.textContent = dbInfo.type === "firebase" ? "Firebase Database Connected" : "Local Sandbox Active";
+      statConnectionState.textContent = dbInfo.type === "firebase" ? "Cloud Database Connected" : "Local Sandbox Active";
       statConnectionState.style.color = dbInfo.type === "firebase" ? "#10b981" : "#f59e0b";
     }
 
@@ -127,6 +155,7 @@ async function init() {
 // DYNAMIC FILTER GENERATOR
 // ---------------------------------------------------------
 function buildFilters() {
+  if (shareModeActive) return; // Skip building filters in share mode
   if (!categoryFiltersContainer || !tagsCloudContainer) return;
 
   // Extract unique categories
@@ -179,6 +208,11 @@ function buildFilters() {
 // FILTER LOGIC & RENDERING
 // ---------------------------------------------------------
 function applyFiltersAndRender() {
+  if (shareModeActive) {
+    renderSharedPrompt();
+    return;
+  }
+
   filteredPrompts = allPrompts.filter(p => {
     // Category check
     if (activeCategory !== "ALL" && p.category !== activeCategory) {
@@ -210,6 +244,89 @@ function applyFiltersAndRender() {
   renderPrompts();
 }
 
+// Render direct shared prompt preview
+function renderSharedPrompt() {
+  if (!promptsGallery) return;
+  promptsGallery.innerHTML = "";
+  
+  const p = allPrompts.find(item => item.id === sharedPromptId);
+  
+  if (!p) {
+    promptsGallery.innerHTML = `
+      <div class="no-records">
+        Shared prompt not found or has been removed from database.
+        <br><br>
+        <button class="btn-corporate" id="btn-back-home">Go to Prompt Ghor</button>
+      </div>
+    `;
+    document.getElementById("btn-back-home").addEventListener("click", resetToMainView);
+    return;
+  }
+  
+  // Render simplified preview card
+  const card = document.createElement("article");
+  card.className = "corporate-card";
+  card.style.cursor = "pointer";
+  card.style.padding = "40px";
+  card.style.textAlign = "center";
+  
+  // Optional Cover image inside shared card
+  let imageHTML = "";
+  if (p.image) {
+    imageHTML = `<img src="${p.image}" class="card-image-header" alt="${escapeHTML(p.title)} Cover" style="margin-bottom: 25px; border-radius: 8px;">`;
+  } else {
+    imageHTML = `
+      <div style="margin-bottom: 20px; color: var(--accent-red);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      </div>
+    `;
+  }
+  
+  card.innerHTML = `
+    ${imageHTML}
+    <h2 class="card-title" style="font-size: 1.8rem; margin-bottom: 15px;">${escapeHTML(p.title)}</h2>
+    <p class="card-description" style="font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 30px; line-height: 1.6;">${escapeHTML(p.description)}</p>
+    <button class="btn-corporate" style="font-size: 1rem; padding: 12px 30px;">Reveal Full Prompt & Copy</button>
+  `;
+  
+  card.addEventListener("click", () => {
+    // Highlight and show this exact prompt in main view
+    resetToMainView(p.id);
+  });
+  
+  promptsGallery.appendChild(card);
+}
+
+function resetToMainView(targetId = null) {
+  shareModeActive = false;
+  sharedPromptId = null;
+  
+  // Restore layout elements display
+  if (searchSection) searchSection.style.display = "block";
+  if (categoryNav) categoryNav.style.display = "flex";
+  if (dashboardSidebar) dashboardSidebar.style.display = "flex";
+  
+  const gridLayout = document.getElementById("main-grid-layout");
+  if (gridLayout) {
+    gridLayout.style.gridTemplateColumns = ""; // restore grid split
+  }
+  
+  // Clean URL query parameters
+  window.history.pushState({}, document.title, window.location.pathname);
+  
+  // If target prompt was passed, filter to highlight it specifically
+  if (typeof targetId === "string") {
+    const targetPrompt = allPrompts.find(item => item.id === targetId);
+    if (targetPrompt) {
+      searchQuery = targetPrompt.title;
+      if (searchInput) searchInput.value = targetPrompt.title;
+    }
+  }
+  
+  buildFilters();
+  applyFiltersAndRender();
+}
+
 // Render cards to gallery
 function renderPrompts() {
   if (!promptsGallery) return;
@@ -233,7 +350,14 @@ function renderPrompts() {
       <span class="tag-badge" data-tag="${tag}">${tag}</span>
     `).join("");
     
+    // Optional Image header
+    let imageHTML = "";
+    if (p.image) {
+      imageHTML = `<img src="${p.image}" class="card-image-header" alt="${escapeHTML(p.title)} Cover">`;
+    }
+    
     card.innerHTML = `
+      ${imageHTML}
       <div class="card-top">
         <h3 class="card-title">${escapeHTML(p.title)}</h3>
         <span class="card-category-tag">${escapeHTML(p.category)}</span>
@@ -249,9 +373,9 @@ function renderPrompts() {
           ${tagsHTML}
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="btn-corporate secondary download-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-            Download
+          <button class="btn-corporate secondary share-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
           </button>
           <button class="btn-corporate secondary copy-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
@@ -274,13 +398,13 @@ function renderPrompts() {
     // Add Copy listener
     const copyBtn = card.querySelector(".copy-button");
     copyBtn.addEventListener("click", () => {
-      copyPromptToClipboard(p.prompt);
+      triggerCopyRedirection(p.prompt);
     });
 
-    // Add Download listener
-    const downloadBtn = card.querySelector(".download-button");
-    downloadBtn.addEventListener("click", () => {
-      downloadPrompt(p.title, p.prompt);
+    // Add Share listener
+    const shareBtn = card.querySelector(".share-button");
+    shareBtn.addEventListener("click", () => {
+      executeSharePrompt(p);
     });
     
     promptsGallery.appendChild(card);
@@ -297,40 +421,88 @@ function renderPrompts() {
 }
 
 // ---------------------------------------------------------
+// SHARE UTILITY (WEB SHARE API WITH CLIPBOARD FALLBACK)
+// ---------------------------------------------------------
+function executeSharePrompt(prompt) {
+  const shareUrl = `${window.location.origin}${window.location.pathname}?p=${prompt.id}`;
+  const shareData = {
+    title: `Prompt: ${prompt.title}`,
+    text: prompt.description,
+    url: shareUrl
+  };
+  
+  // Check if Native browser share is supported and available
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    navigator.share(shareData)
+      .then(() => console.log("Successful native share!"))
+      .catch((error) => {
+        // user cancelled or failed, fallback to clipboard silently
+        console.log("Native share failed/cancelled:", error);
+      });
+  } else {
+    // Fallback to Clipboard Copy
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      showToast("Share link copied to clipboard!");
+    }).catch(err => {
+      console.error("Share link copy failed:", err);
+    });
+  }
+}
+
+// ---------------------------------------------------------
+// TOAST BANNER UTILITY
+// ---------------------------------------------------------
+function showToast(message) {
+  if (copyBanner) {
+    const originalContent = copyBanner.innerHTML;
+    copyBanner.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>${message}`;
+    copyBanner.classList.add("visible");
+    setTimeout(() => {
+      copyBanner.classList.remove("visible");
+      setTimeout(() => {
+        copyBanner.innerHTML = originalContent;
+      }, 300);
+    }, 2500);
+  }
+}
+
+// ---------------------------------------------------------
+// CPM REDIRECTION LOGIC
+// ---------------------------------------------------------
+let copyCounter = parseInt(sessionStorage.getItem("ghor_copy_counter")) || 0;
+let redirectThreshold = parseInt(sessionStorage.getItem("ghor_redirect_threshold")) || (Math.random() < 0.5 ? 2 : 3);
+
+function triggerCopyRedirection(promptText) {
+  // Execute standard copy
+  copyPromptToClipboard(promptText);
+
+  // Increment counter
+  copyCounter++;
+  sessionStorage.setItem("ghor_copy_counter", copyCounter);
+
+  // If threshold reached, open the ad in a new tab and reset
+  if (copyCounter >= redirectThreshold) {
+    copyCounter = 0;
+    sessionStorage.setItem("ghor_copy_counter", "0");
+    
+    // Choose new threshold: randomly 2 or 3
+    const nextThreshold = Math.random() < 0.5 ? 2 : 3;
+    sessionStorage.setItem("ghor_redirect_threshold", nextThreshold);
+
+    // Open target redirection link
+    window.open("https://www.effectivecpmnetwork.com/xei3hy1mp?key=d462a9b0cbb2f223b839d43232577337", "_blank");
+  }
+}
+
+// ---------------------------------------------------------
 // CLIPBOARD COPY UTILITY
 // ---------------------------------------------------------
 function copyPromptToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
-    if (copyBanner) {
-      copyBanner.classList.add("visible");
-      setTimeout(() => {
-        copyBanner.classList.remove("visible");
-      }, 2500);
-    }
+    showToast("Prompt successfully copied to clipboard!");
   }).catch(err => {
     console.error("Clipboard copy failed:", err);
   });
-}
-
-// ---------------------------------------------------------
-// DOWNLOAD UTILITY
-// ---------------------------------------------------------
-function downloadPrompt(title, text) {
-  try {
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    // Format filename dynamically
-    const cleanFilename = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    a.download = `${cleanFilename}-prompt.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("Prompt file download failed:", err);
-  }
 }
 
 // Run Init

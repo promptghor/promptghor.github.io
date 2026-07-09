@@ -1,13 +1,20 @@
 // admin.js - Corporate Admin Panel Script
 
-import { initializeDatabase, subscribeToPrompts, pushPrompt, updatePrompt, deletePrompt } from "./config.js";
+import { initializeDatabase, subscribeToPrompts, pushPrompt, updatePrompt, deletePrompt, ADMIN_HASH } from "./config.js?v=2";
 
 // State Management
 let allPrompts = [];
 let dbInfo = null;
 let editingPromptId = null;
 
-// DOM Elements (Loaded on DOMContentLoaded)
+// DOM Elements - Gatekeeper Screen (Loaded on DOMContentLoaded)
+let gatekeeperScreen;
+let bypassCodeInput;
+let bypassSubmitBtn;
+let gatekeeperStatus;
+
+// DOM Elements - Admin Workspace
+let adminWorkspace;
 let promptCrudForm;
 let idField;
 let titleField;
@@ -32,6 +39,15 @@ function escapeHTML(str) {
     .replace(/'/g, "&#039;");
 }
 
+// SHA-256 Helper using Web Crypto API to avoid plaintext comparison
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
 // ---------------------------------------------------------
 // THEME SWITCHER LOGIC
 // ---------------------------------------------------------
@@ -42,7 +58,7 @@ function initTheme() {
   
   if (!themeToggleBtn) return;
   
-  const savedTheme = localStorage.getItem("corporate_theme") || "dark";
+  const savedTheme = localStorage.getItem("corporate_theme") || "light";
   
   const applyTheme = (theme) => {
     if (theme === "light") {
@@ -66,6 +82,39 @@ function initTheme() {
     localStorage.setItem("corporate_theme", currentTheme);
     applyTheme(currentTheme);
   });
+}
+
+// ---------------------------------------------------------
+// AUTHENTICATION / GATEKEEPER
+// ---------------------------------------------------------
+async function checkBypassCode() {
+  const enteredCode = bypassCodeInput.value.trim();
+  const hashedCode = await sha256(enteredCode);
+  
+  if (hashedCode === ADMIN_HASH) {
+    sessionStorage.setItem("admin_authorized", "true");
+    grantAccess();
+  } else {
+    gatekeeperStatus.textContent = "Access Denied: Invalid Authentication Passcode.";
+    bypassCodeInput.value = "";
+    bypassCodeInput.focus();
+    
+    // Add input shake effect
+    bypassCodeInput.style.borderColor = "#ef4444";
+    bypassCodeInput.style.boxShadow = "0 0 10px rgba(239, 68, 68, 0.3)";
+    setTimeout(() => {
+      bypassCodeInput.style.borderColor = "";
+      bypassCodeInput.style.boxShadow = "";
+    }, 1000);
+  }
+}
+
+function grantAccess() {
+  if (gatekeeperScreen) gatekeeperScreen.style.display = "none";
+  if (adminWorkspace) adminWorkspace.style.display = "block";
+  
+  // Initialize Database Connect
+  initAdminWorkspace();
 }
 
 // ---------------------------------------------------------
@@ -94,6 +143,11 @@ async function initAdminWorkspace() {
 // DOM Ready Handler
 window.addEventListener("DOMContentLoaded", () => {
   // Bind elements safely
+  gatekeeperScreen = document.getElementById("gatekeeper-screen");
+  bypassCodeInput = document.getElementById("bypass-code-input");
+  bypassSubmitBtn = document.getElementById("bypass-submit-btn");
+  gatekeeperStatus = document.getElementById("gatekeeper-status");
+  adminWorkspace = document.getElementById("admin-workspace");
   promptCrudForm = document.getElementById("prompt-crud-form");
   idField = document.getElementById("prompt-id-field");
   titleField = document.getElementById("prompt-title-field");
@@ -110,8 +164,24 @@ window.addEventListener("DOMContentLoaded", () => {
   // Init themes
   initTheme();
   
-  // Directly load active database admin workspace
-  initAdminWorkspace();
+  // Verify passcode login authorization on load
+  if (sessionStorage.getItem("admin_authorized") === "true") {
+    grantAccess();
+  } else {
+    if (bypassCodeInput) bypassCodeInput.focus();
+  }
+
+  // Bind bypass login events
+  if (bypassSubmitBtn) {
+    bypassSubmitBtn.addEventListener("click", checkBypassCode);
+  }
+  if (bypassCodeInput) {
+    bypassCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        checkBypassCode();
+      }
+    });
+  }
 
   // Setup form submit
   if (promptCrudForm) {
@@ -140,10 +210,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
       try {
         if (id) {
-          // EDIT MODE
           await updatePrompt(dbInfo, id, promptData, (msg) => console.log(msg));
         } else {
-          // CREATE MODE
           await pushPrompt(dbInfo, promptData, (msg) => console.log(msg));
         }
         resetForm();

@@ -1,6 +1,6 @@
 // app.js - Corporate Client Portal Script
 
-import { initializeDatabase, subscribeToPrompts } from "./config.js";
+import { initializeDatabase, subscribeToPrompts } from "./config.js?v=2";
 
 // State Management
 let allPrompts = [];
@@ -43,7 +43,8 @@ function initTheme() {
   
   if (!themeToggleBtn) return;
   
-  const savedTheme = localStorage.getItem("corporate_theme") || "dark";
+  // Set light theme as the default preference
+  const savedTheme = localStorage.getItem("corporate_theme") || "light";
   
   const applyTheme = (theme) => {
     if (theme === "light") {
@@ -247,10 +248,16 @@ function renderPrompts() {
         <div class="tags-container">
           ${tagsHTML}
         </div>
-        <button class="btn-corporate secondary copy-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-          Copy Prompt
-        </button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-corporate secondary download-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Download
+          </button>
+          <button class="btn-corporate secondary copy-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            Copy
+          </button>
+        </div>
       </div>
     `;
     
@@ -268,6 +275,12 @@ function renderPrompts() {
     const copyBtn = card.querySelector(".copy-button");
     copyBtn.addEventListener("click", () => {
       copyPromptToClipboard(p.prompt);
+    });
+
+    // Add Download listener
+    const downloadBtn = card.querySelector(".download-button");
+    downloadBtn.addEventListener("click", () => {
+      downloadPrompt(p.title, p.prompt);
     });
     
     promptsGallery.appendChild(card);
@@ -289,7 +302,6 @@ function renderPrompts() {
 function copyPromptToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
     if (copyBanner) {
-      // Show corporate toast notification banner
       copyBanner.classList.add("visible");
       setTimeout(() => {
         copyBanner.classList.remove("visible");
@@ -298,6 +310,27 @@ function copyPromptToClipboard(text) {
   }).catch(err => {
     console.error("Clipboard copy failed:", err);
   });
+}
+
+// ---------------------------------------------------------
+// DOWNLOAD UTILITY
+// ---------------------------------------------------------
+function downloadPrompt(title, text) {
+  try {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    // Format filename dynamically
+    const cleanFilename = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    a.download = `${cleanFilename}-prompt.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Prompt file download failed:", err);
+  }
 }
 
 // Run Init

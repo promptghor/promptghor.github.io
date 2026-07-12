@@ -23,6 +23,8 @@ let categoryField;
 let tagsField;
 let descField;
 let contentField;
+let modelField;
+let whyField;
 let submitBtn;
 let clearBtn;
 let formWidgetTitle;
@@ -64,12 +66,12 @@ function initTheme() {
   const savedTheme = localStorage.getItem("corporate_theme") || "light";
   
   const applyTheme = (theme) => {
-    if (theme === "light") {
-      document.body.classList.add("light-theme");
+    if (theme === "dark") {
+      document.body.classList.add("dark-theme");
       if (themeIconSun) themeIconSun.style.display = "inline-block";
       if (themeIconMoon) themeIconMoon.style.display = "none";
     } else {
-      document.body.classList.remove("light-theme");
+      document.body.classList.remove("dark-theme");
       if (themeIconSun) themeIconSun.style.display = "none";
       if (themeIconMoon) themeIconMoon.style.display = "inline-block";
     }
@@ -80,8 +82,8 @@ function initTheme() {
   
   // Bind click listener
   themeToggleBtn.addEventListener("click", () => {
-    const isLight = document.body.classList.toggle("light-theme");
-    const currentTheme = isLight ? "light" : "dark";
+    const isDark = document.body.classList.toggle("dark-theme");
+    const currentTheme = isDark ? "dark" : "light";
     localStorage.setItem("corporate_theme", currentTheme);
     applyTheme(currentTheme);
   });
@@ -158,6 +160,8 @@ window.addEventListener("DOMContentLoaded", () => {
   tagsField = document.getElementById("prompt-tags-field");
   descField = document.getElementById("prompt-desc-field");
   contentField = document.getElementById("prompt-content-field");
+  modelField = document.getElementById("prompt-model-field");
+  whyField = document.getElementById("prompt-why-field");
   submitBtn = document.getElementById("prompt-submit-btn");
   clearBtn = document.getElementById("prompt-clear-btn");
   formWidgetTitle = document.getElementById("form-widget-title");
@@ -188,25 +192,47 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // File Upload listener (Base64 conversion)
+  // File Upload listener (Converts uploaded images to WebP)
   if (imageField) {
     imageField.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (file) {
-        // Prevent files that are too large (limit to 1MB to avoid database bloat)
-        if (file.size > 1024 * 1024) {
-          alert("[CRITICAL] File size exceeds 1MB limit. Please compress your image first.");
-          imageField.value = "";
-          return;
-        }
-        
         const reader = new FileReader();
         reader.onload = (event) => {
-          currentBase64Image = event.target.result;
-          if (imagePreview) {
-            imagePreview.src = currentBase64Image;
-            imagePreview.style.display = "block";
-          }
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            
+            // Resize large uploads before storing them to keep the preview and database lightweight.
+            const maxDimension = 1600;
+            const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            
+            // Draw image onto canvas context
+            ctx.drawImage(img, 0, 0);
+            
+            // Convert drawn image to WebP with 0.8 quality factor
+            const webpDataUrl = canvas.toDataURL("image/webp", 0.8);
+            
+            // Limit to 1MB to prevent RTDB node bloat
+            const approximateSize = Math.round((webpDataUrl.length * 3) / 4);
+            if (approximateSize > 1024 * 1024) {
+              alert("[CRITICAL] Converted WebP file exceeds 1MB limit. Please upload a smaller image.");
+              imageField.value = "";
+              if (imagePreview) imagePreview.style.display = "none";
+              currentBase64Image = "";
+              return;
+            }
+            
+            currentBase64Image = webpDataUrl;
+            if (imagePreview) {
+              imagePreview.src = currentBase64Image;
+              imagePreview.style.display = "block";
+            }
+          };
+          img.src = event.target.result;
         };
         reader.readAsDataURL(file);
       }
@@ -224,6 +250,8 @@ window.addEventListener("DOMContentLoaded", () => {
       const rawTags = tagsField.value;
       const description = descField.value.trim();
       const promptText = contentField.value.trim();
+      const model = modelField.value;
+      const whyWorks = whyField.value.trim();
       
       const tags = rawTags
         .split(",")
@@ -236,7 +264,9 @@ window.addEventListener("DOMContentLoaded", () => {
         tags,
         description,
         prompt: promptText,
-        image: currentBase64Image // Insert the base64 cover image string
+        model,
+        whyWorks,
+        image: currentBase64Image
       };
 
       try {
@@ -267,6 +297,8 @@ function resetForm() {
   if (tagsField) tagsField.value = "";
   if (descField) descField.value = "";
   if (contentField) contentField.value = "";
+  if (modelField) modelField.value = "generic";
+  if (whyField) whyField.value = "";
   if (imageField) imageField.value = "";
   if (imagePreview) {
     imagePreview.src = "";
@@ -342,6 +374,8 @@ function loadPromptToForm(prompt) {
   if (tagsField) tagsField.value = (prompt.tags || []).join(", ");
   if (descField) descField.value = prompt.description;
   if (contentField) contentField.value = prompt.prompt;
+  if (modelField) modelField.value = prompt.model || "generic";
+  if (whyField) whyField.value = prompt.whyWorks || "";
   
   currentBase64Image = prompt.image || "";
   if (imagePreview) {

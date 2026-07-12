@@ -10,6 +10,10 @@ let activeTag = null;
 let searchQuery = "";
 let dbInfo = null;
 
+// Pagination State
+let currentPage = 1;
+const CARDS_PER_PAGE = 6;
+
 // Share Mode State
 let shareModeActive = false;
 let sharedPromptId = null;
@@ -23,6 +27,9 @@ let copyBanner;
 let searchSection;
 let categoryNav;
 let dashboardSidebar;
+let paginationContainer;
+let recentViewedPanel;
+let recentViewedList;
 
 // Stats Elements
 let statPromptCount;
@@ -50,25 +57,28 @@ function initTheme() {
   
   if (!themeToggleBtn) return;
   
-  const savedTheme = localStorage.getItem("corporate_theme") || "light";
+  // Neutral light theme default, dark theme toggled
+  const savedTheme = localStorage.getItem("corporate_theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
   
   const applyTheme = (theme) => {
-    if (theme === "light") {
-      document.body.classList.add("light-theme");
+    if (theme === "dark") {
+      document.body.classList.add("dark-theme");
       if (themeIconSun) themeIconSun.style.display = "inline-block";
       if (themeIconMoon) themeIconMoon.style.display = "none";
     } else {
-      document.body.classList.remove("light-theme");
+      document.body.classList.remove("dark-theme");
       if (themeIconSun) themeIconSun.style.display = "none";
       if (themeIconMoon) themeIconMoon.style.display = "inline-block";
     }
   };
   
-  applyTheme(savedTheme);
+  applyTheme(initialTheme);
   
   themeToggleBtn.addEventListener("click", () => {
-    const isLight = document.body.classList.toggle("light-theme");
-    const currentTheme = isLight ? "light" : "dark";
+    const isDark = document.body.classList.toggle("dark-theme");
+    const currentTheme = isDark ? "dark" : "light";
     localStorage.setItem("corporate_theme", currentTheme);
     applyTheme(currentTheme);
   });
@@ -87,6 +97,9 @@ async function init() {
   statPromptCount = document.getElementById("stat-prompts-count");
   statCategoryCount = document.getElementById("stat-categories-count");
   statConnectionState = document.getElementById("stat-connection-state");
+  paginationContainer = document.getElementById("pagination-container");
+  recentViewedPanel = document.getElementById("recent-viewed-panel");
+  recentViewedList = document.getElementById("recent-viewed-list");
   
   // Layout wrappers to hide in share mode
   searchSection = document.getElementById("search-section");
@@ -107,18 +120,23 @@ async function init() {
     if (searchSection) searchSection.style.display = "none";
     if (categoryNav) categoryNav.style.display = "none";
     if (dashboardSidebar) dashboardSidebar.style.display = "none";
+    if (recentViewedPanel) recentViewedPanel.style.display = "none";
     
     // Force grid to single column layout
     const gridLayout = document.getElementById("main-grid-layout");
     if (gridLayout) {
       gridLayout.style.gridTemplateColumns = "1fr";
     }
+    
+    // Log recently viewed
+    trackRecentlyViewed(shareId);
   }
   
   // Bind search input listener
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       searchQuery = e.target.value;
+      currentPage = 1; // Reset to page 1 on search
       applyFiltersAndRender();
     });
   }
@@ -140,6 +158,7 @@ async function init() {
       allPrompts = prompts;
       
       // Update UI elements
+      renderRecentlyViewedRow();
       buildFilters();
       applyFiltersAndRender();
     }, (errorMsg) => {
@@ -152,11 +171,71 @@ async function init() {
 }
 
 // ---------------------------------------------------------
+// RECENTLY VIEWED TRACKING (LocalStorage, Not Firebase)
+// ---------------------------------------------------------
+function trackRecentlyViewed(promptId) {
+  try {
+    let recent = JSON.parse(localStorage.getItem("recently_viewed_prompts")) || [];
+    // Remove if already exists to push it to top
+    recent = recent.filter(id => id !== promptId);
+    recent.unshift(promptId);
+    // Limit to 5 items
+    if (recent.length > 5) {
+      recent.pop();
+    }
+    localStorage.setItem("recently_viewed_prompts", JSON.stringify(recent));
+  } catch (err) {
+    console.error("Failed to update recently viewed:", err);
+  }
+}
+
+function renderRecentlyViewedRow() {
+  if (shareModeActive || !recentViewedPanel || !recentViewedList) return;
+  
+  try {
+    const recentIds = JSON.parse(localStorage.getItem("recently_viewed_prompts")) || [];
+    if (recentIds.length === 0) {
+      recentViewedPanel.style.display = "none";
+      return;
+    }
+    
+    recentViewedList.innerHTML = "";
+    let count = 0;
+    
+    recentIds.forEach(id => {
+      const p = allPrompts.find(item => item.id === id);
+      if (p) {
+        count++;
+        const card = document.createElement("a");
+        card.className = "recent-card";
+        card.href = `?p=${p.id}`;
+        card.innerHTML = `
+          <div style="font-size: 0.72rem; color: var(--accent-color); font-weight: 600; margin-bottom: 4px; text-transform: uppercase;">
+            ${escapeHTML(p.category)}
+          </div>
+          <div class="recent-card-title">${escapeHTML(p.title)}</div>
+        `;
+        recentViewedList.appendChild(card);
+      }
+    });
+    
+    if (count > 0) {
+      recentViewedPanel.style.display = "block";
+    } else {
+      recentViewedPanel.style.display = "none";
+    }
+  } catch (err) {
+    console.error("Error rendering recently viewed:", err);
+    recentViewedPanel.style.display = "none";
+  }
+}
+
+// ---------------------------------------------------------
 // DYNAMIC FILTER GENERATOR
 // ---------------------------------------------------------
 function buildFilters() {
   if (shareModeActive) return; // Skip building filters in share mode
-  if (!categoryFiltersContainer || !tagsCloudContainer) return;
+  if (!categoryFiltersContainer) return;
 
   // Extract unique categories
   const categories = ["ALL", ...new Set(allPrompts.map(p => p.category).filter(Boolean))];
@@ -166,9 +245,10 @@ function buildFilters() {
   categories.forEach(cat => {
     const btn = document.createElement("button");
     btn.className = `category-pill ${activeCategory === cat ? "active" : ""}`;
-    btn.textContent = cat === "ALL" ? "All Prompts" : cat;
+    btn.textContent = cat === "ALL" ? "সকল প্রম্পট (All)" : cat;
     btn.addEventListener("click", () => {
       activeCategory = cat;
+      currentPage = 1; // Reset to page 1 on category change
       
       // Update active state classes
       document.querySelectorAll(".category-pill").forEach(t => t.classList.remove("active"));
@@ -178,30 +258,6 @@ function buildFilters() {
     });
     categoryFiltersContainer.appendChild(btn);
   });
-  
-  // Extract unique tags
-  const tags = [...new Set(allPrompts.flatMap(p => p.tags || []).filter(Boolean))];
-  
-  // Render Tags Cloud
-  tagsCloudContainer.innerHTML = "";
-  tags.forEach(tag => {
-    const chip = document.createElement("button");
-    chip.className = `tag-chip ${activeTag === tag ? "active" : ""}`;
-    chip.textContent = `${tag}`;
-    chip.addEventListener("click", () => {
-      if (activeTag === tag) {
-        activeTag = null; // Toggle off
-      } else {
-        activeTag = tag;
-      }
-      applyFiltersAndRender();
-    });
-    tagsCloudContainer.appendChild(chip);
-  });
-
-  // Update Stats Widget values
-  if (statPromptCount) statPromptCount.textContent = allPrompts.length;
-  if (statCategoryCount) statCategoryCount.textContent = categories.length - 1; // subtract 'ALL'
 }
 
 // ---------------------------------------------------------
@@ -242,63 +298,196 @@ function applyFiltersAndRender() {
   });
 
   renderPrompts();
+  renderPaginationControls();
 }
 
-// Render direct shared prompt preview
+// ---------------------------------------------------------
+// PAGE 3: SHARE / PROMPT DETAIL PAGE VIEW
+// ---------------------------------------------------------
 function renderSharedPrompt() {
   if (!promptsGallery) return;
   promptsGallery.innerHTML = "";
+  if (paginationContainer) paginationContainer.innerHTML = "";
   
   const p = allPrompts.find(item => item.id === sharedPromptId);
   
   if (!p) {
     promptsGallery.innerHTML = `
       <div class="no-records">
-        Shared prompt not found or has been removed from database.
+        দুঃখিত, প্রম্পটটি পাওয়া যায়নি অথবা ডাটাবেস থেকে মুছে ফেলা হয়েছে।
         <br><br>
-        <button class="btn-corporate" id="btn-back-home">Go to Prompt Ghor</button>
+        <button class="btn-corporate" id="btn-back-home">প্রধান পাতায় ফিরে যান</button>
       </div>
     `;
     document.getElementById("btn-back-home").addEventListener("click", resetToMainView);
     return;
   }
   
-  // Render simplified preview card
-  const card = document.createElement("article");
-  card.className = "corporate-card";
-  card.style.cursor = "pointer";
-  card.style.padding = "40px";
-  card.style.textAlign = "center";
-  
-  // Optional Cover image inside shared card
-  let imageHTML = "";
-  if (p.image) {
-    imageHTML = `<img src="${p.image}" class="card-image-header" alt="${escapeHTML(p.title)} Cover" style="margin-bottom: 25px; border-radius: 8px;">`;
-  } else {
-    imageHTML = `
-      <div style="margin-bottom: 20px; color: var(--accent-red);">
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-      </div>
-    `;
+  // Format Model Badge
+  const model = (p.model || "").trim().toLowerCase();
+  let badgeClass = "model-badge-generic";
+  let badgeLabel = p.model || "Unknown";
+  if (model.includes("chatgpt") || model.includes("gpt")) {
+    badgeClass = "model-badge-chatgpt";
+    badgeLabel = "ChatGPT";
+  } else if (model.includes("gemini")) {
+    badgeClass = "model-badge-gemini";
+    badgeLabel = "Gemini";
+  } else if (model.includes("claude")) {
+    badgeClass = "model-badge-claude";
+    badgeLabel = "Claude";
   }
   
-  card.innerHTML = `
-    ${imageHTML}
-    <h2 class="card-title" style="font-size: 1.8rem; margin-bottom: 15px;">${escapeHTML(p.title)}</h2>
-    <p class="card-description" style="font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 30px; line-height: 1.6;">${escapeHTML(p.description)}</p>
-    <button class="btn-corporate" style="font-size: 1rem; padding: 12px 30px;">Reveal Full Prompt & Copy</button>
+  const mockViews = Math.floor(((p.createdAt || Date.now()) % 890) + 110) + " views";
+  
+  // Cover image check
+  let imageHTML = "";
+  if (p.image) {
+    imageHTML = `<img src="${p.image}" class="detail-header-image" alt="${escapeHTML(p.title)} Cover">`;
+  }
+  
+  // Explanation block (fallback check if missing in database)
+  const explanation = p.whyWorks || "এই প্রম্পটটি এআই মডেলের সাথে নিখুঁত ইন্টারেকশন নিশ্চিত করার জন্য কাঠামোগতভাবে সাজানো হয়েছে। এটি সঠিক নির্দেশনা দিতে সাহায্য করবে।";
+  
+  const container = document.createElement("div");
+  container.className = "prompt-detail-container";
+  
+  container.innerHTML = `
+    <article class="prompt-detail-card">
+      ${imageHTML}
+      <div class="detail-meta-row">
+        <span class="model-badge ${badgeClass}">${badgeLabel}</span>
+        <span class="view-count">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"/><circle cx="12" cy="12" r="3"/></svg>
+          ${mockViews}
+        </span>
+      </div>
+      <h2 class="detail-title">${escapeHTML(p.title)}</h2>
+      <p class="detail-desc">${escapeHTML(p.description)}</p>
+      
+      <!-- Primary Copyable block -->
+      <div class="detail-prompt-block">
+        <pre class="detail-prompt-text" id="detail-prompt-body">${escapeHTML(p.prompt)}</pre>
+      </div>
+      
+      <!-- Action buttons below prompt -->
+      <div class="detail-actions">
+        <button class="btn-corporate" id="detail-copy-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          কপি করুন (Copy)
+        </button>
+        <button class="btn-corporate secondary btn-square" id="detail-share-btn" aria-label="Share Prompt">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+      </div>
+      
+      <!-- Inline Ad Placement - Never interrupting the prompt content itself -->
+      <div style="margin: 25px 0; border-top: 1px solid var(--border-color); padding-top: 20px;">
+        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 10px;">Sponsored Advertisement</span>
+        <div style="display: flex; justify-content: center; align-items: center; background-color: var(--bg-tertiary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <!-- Reuse Banner 300x250 ad container or iframe loader -->
+          <div style="width: 300px; height: 100px; background-color: var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--text-muted); border-radius: 4px;">SPONSORED AD SLOT</div>
+        </div>
+      </div>
+    </article>
+    
+    <!-- Related Prompts Grid Section at the bottom as traffic driver -->
+    <section class="related-prompts-section">
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">সম্পর্কিত অন্যান্য প্রম্পট (Related Prompts)</h3>
+      <div class="prompts-list" id="related-prompts-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
   `;
   
-  card.addEventListener("click", () => {
-    // Trigger CPM ad popunder redirection first
-    window.open("https://www.effectivecpmnetwork.com/xei3hy1mp?key=d462a9b0cbb2f223b839d43232577337", "_blank");
-    // Highlight and show this exact prompt in main view
-    resetToMainView(p.id);
+  // Bind Detail actions
+  container.querySelector("#detail-copy-btn").addEventListener("click", () => {
+    triggerCopyRedirection(p.prompt);
   });
   
-  promptsGallery.appendChild(card);
+  container.querySelector("#detail-share-btn").addEventListener("click", () => {
+    executeSharePrompt(p);
+  });
+  
+  promptsGallery.appendChild(container);
+  
+  // Render Related Prompts Grid
+  renderRelatedPrompts(p);
 }
 
+function renderRelatedPrompts(currentPrompt) {
+  const grid = document.getElementById("related-prompts-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  
+  // Filter prompts from the same category, excluding current one
+  let related = allPrompts.filter(item => item.category === currentPrompt.category && item.id !== currentPrompt.id);
+  // Fallback to general list if not enough category matches
+  if (related.length < 3) {
+    related = allPrompts.filter(item => item.id !== currentPrompt.id);
+  }
+  
+  // Slice to max 3 related suggestions
+  related = related.slice(0, 3);
+  
+  if (related.length === 0) {
+    grid.innerHTML = `<div style="font-size: 0.85rem; color: var(--text-muted);">কোন সম্পর্কিত প্রম্পট পাওয়া যায়নি।</div>`;
+    return;
+  }
+  
+  related.forEach(item => {
+    const card = document.createElement("article");
+    card.className = "corporate-card";
+    
+    const model = (item.model || "").trim().toLowerCase();
+    let badgeClass = "model-badge-generic";
+    let badgeLabel = item.model || "Unknown";
+    if (model.includes("chatgpt") || model.includes("gpt")) {
+      badgeClass = "model-badge-chatgpt";
+      badgeLabel = "ChatGPT";
+    } else if (model.includes("gemini")) {
+      badgeClass = "model-badge-gemini";
+      badgeLabel = "Gemini";
+    } else if (model.includes("claude")) {
+      badgeClass = "model-badge-claude";
+      badgeLabel = "Claude";
+    }
+    
+    card.innerHTML = `
+      <div class="card-top-row">
+        <span class="model-badge ${badgeClass}">${badgeLabel}</span>
+      </div>
+      <a href="?p=${item.id}" class="card-title-link">
+        <h4 class="card-title" style="font-size: 0.98rem; min-height: auto; margin-bottom: 6px;">${escapeHTML(item.title)}</h4>
+      </a>
+      <p class="card-description" style="font-size: 0.8rem; margin-bottom: 12px; min-height: auto; -webkit-line-clamp: 2;">${escapeHTML(item.description)}</p>
+      
+      <button class="btn-corporate" style="height: 38px; font-size: 0.82rem;" onclick="window.location.href='?p=${item.id}'">
+        ভিউ প্রম্পট (View)
+      </button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function executeSharePrompt(prompt) {
+  const url = new URL(window.location.href);
+  url.search = `?p=${encodeURIComponent(prompt.id)}`;
+  url.hash = "";
+  const text = `${prompt.title}\n\n${prompt.description || ""}`.trim();
+  const shareData = { title: prompt.title, text, url: url.toString() };
+
+  if (navigator.share) {
+    navigator.share(shareData).catch((error) => {
+      if (error.name !== "AbortError") console.error("Sharing failed:", error);
+    });
+    return;
+  }
+
+  navigator.clipboard.writeText(`${text}\n\n${shareData.url}`).then(() => {
+    showToast("বর্ণনাসহ শেয়ার লিংক কপি করা হয়েছে!");
+  });
+}
 function resetToMainView(targetId = null) {
   shareModeActive = false;
   sharedPromptId = null;
@@ -307,6 +496,7 @@ function resetToMainView(targetId = null) {
   if (searchSection) searchSection.style.display = "block";
   if (categoryNav) categoryNav.style.display = "flex";
   if (dashboardSidebar) dashboardSidebar.style.display = "flex";
+  if (recentViewedPanel) renderRecentlyViewedRow();
   
   const gridLayout = document.getElementById("main-grid-layout");
   if (gridLayout) {
@@ -329,7 +519,9 @@ function resetToMainView(targetId = null) {
   applyFiltersAndRender();
 }
 
-// Render cards to gallery
+// ---------------------------------------------------------
+// RENDERING FEED GRID & AD INJECTIONS EVERY 6 CARDS
+// ---------------------------------------------------------
 function renderPrompts() {
   if (!promptsGallery) return;
   promptsGallery.innerHTML = "";
@@ -337,20 +529,37 @@ function renderPrompts() {
   if (filteredPrompts.length === 0) {
     promptsGallery.innerHTML = `
       <div class="no-records">
-        No prompts match your search query. Try another keyword.
+        খুঁজে পাওয়া যায়নি। অন্য কীওয়ার্ড দিয়ে সার্চ করার চেষ্টা করুন।
       </div>
     `;
     return;
   }
   
-  filteredPrompts.forEach(p => {
+  // Pagination slice
+  const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
+  const endIndex = startIndex + CARDS_PER_PAGE;
+  const pagePrompts = filteredPrompts.slice(startIndex, endIndex);
+  
+  pagePrompts.forEach((p, index) => {
     const card = document.createElement("article");
     card.className = "corporate-card";
     
-    // Format Tags
-    const tagsHTML = (p.tags || []).map(tag => `
-      <span class="tag-badge" data-tag="${tag}">${tag}</span>
-    `).join("");
+    // Format Model Badge
+    const model = (p.model || "").trim().toLowerCase();
+    let badgeClass = "model-badge-generic";
+    let badgeLabel = p.model || "Unknown";
+    if (model.includes("chatgpt") || model.includes("gpt")) {
+      badgeClass = "model-badge-chatgpt";
+      badgeLabel = "ChatGPT";
+    } else if (model.includes("gemini")) {
+      badgeClass = "model-badge-gemini";
+      badgeLabel = "Gemini";
+    } else if (model.includes("claude")) {
+      badgeClass = "model-badge-claude";
+      badgeLabel = "Claude";
+    }
+    
+    const mockViews = Math.floor(((p.createdAt || Date.now()) % 890) + 110) + " views";
     
     // Optional Image header
     let imageHTML = "";
@@ -358,89 +567,65 @@ function renderPrompts() {
       imageHTML = `<img src="${p.image}" class="card-image-header" alt="${escapeHTML(p.title)} Cover">`;
     }
     
-    // Initially ONLY show image, title, and description.
-    // Wrap system prompt, tags, and copy/share buttons in a collapsed container.
     card.innerHTML = `
-      ${imageHTML}
-      <div class="card-top">
-        <h3 class="card-title">${escapeHTML(p.title)}</h3>
-        <span class="card-category-tag">${escapeHTML(p.category)}</span>
+      <div>
+        ${imageHTML}
+        <div class="card-top-row">
+          <span class="model-badge ${badgeClass}">${badgeLabel}</span>
+          <span class="view-count">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"/><circle cx="12" cy="12" r="3"/></svg>
+            ${mockViews}
+          </span>
+        </div>
+        <a href="?p=${p.id}" class="card-title-link">
+          <h3 class="card-title">${escapeHTML(p.title)}</h3>
+        </a>
+        <p class="card-description">${escapeHTML(p.description)}</p>
       </div>
-      <p class="card-description" style="margin-bottom: 12px;">${escapeHTML(p.description)}</p>
       
-      <!-- Accordion Button to reveal prompt details -->
-      <button class="btn-corporate toggle-prompt-btn" style="width: 100%; justify-content: center; margin-top: 5px; font-size: 0.9rem; padding: 8px 16px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-        View Prompt
-      </button>
-
-      <!-- Expandable Details Area -->
-      <div class="card-expanded-content" style="display: none; border-top: 1px solid var(--border-color); padding-top: 18px; margin-top: 18px;">
-        <div class="card-content-block">
-          <pre class="card-prompt-text" id="prompt-text-${p.id}">${escapeHTML(p.prompt)}</pre>
-        </div>
-        
-        <div class="card-footer">
-          <div class="tags-container">
-            ${tagsHTML}
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn-corporate secondary share-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              Share
-            </button>
-            <button class="btn-corporate secondary copy-button" data-id="${p.id}" style="padding: 6px 14px; font-size: 0.85rem;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-              Copy
-            </button>
-          </div>
-        </div>
+      <!-- Actions Row at bottom: Copy primary full-width + Share icon -->
+      <div class="card-actions">
+        <button class="btn-corporate copy-button" data-id="${p.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          কপি করুন (Copy)
+        </button>
+        <button class="btn-corporate secondary btn-square share-button" data-id="${p.id}" aria-label="Share">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
       </div>
     `;
     
-    // Bind toggle buttons
-    const toggleBtn = card.querySelector(".toggle-prompt-btn");
-    const expandedContent = card.querySelector(".card-expanded-content");
-    
-    toggleBtn.addEventListener("click", () => {
-      const isHidden = expandedContent.style.display === "none";
-      expandedContent.style.display = isHidden ? "block" : "none";
-      
-      if (isHidden) {
-        toggleBtn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-          Hide Prompt
-        `;
-        toggleBtn.classList.add("secondary");
-      } else {
-        toggleBtn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-          View Prompt
-        `;
-        toggleBtn.classList.remove("secondary");
-      }
-    });
-
-    // Add Click listeners for tags inside the card
-    card.querySelectorAll(".tag-badge").forEach(badge => {
-      badge.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const tag = badge.dataset.tag;
-        activeTag = (activeTag === tag) ? null : tag;
-        applyFiltersAndRender();
-      });
-    });
-    
-    // Add Copy listener
-    const copyBtn = card.querySelector(".copy-button");
-    copyBtn.addEventListener("click", () => {
+    // Bind Copy listener
+    card.querySelector(".copy-button").addEventListener("click", (e) => {
+      e.stopPropagation();
+      trackRecentlyViewed(p.id);
       triggerCopyRedirection(p.prompt);
     });
 
-    // Add Share listener
-    const shareBtn = card.querySelector(".share-button");
-    shareBtn.addEventListener("click", () => {
+    // Bind Share listener
+    card.querySelector(".share-button").addEventListener("click", (e) => {
+      e.stopPropagation();
       executeSharePrompt(p);
+    });
+    
+    // Bind card link action for detailed views
+    card.querySelector(".card-title-link").addEventListener("click", (e) => {
+      e.preventDefault();
+      window.history.pushState({}, "", `?p=${p.id}`);
+      sharedPromptId = p.id;
+      shareModeActive = true;
+      
+      // Hide standard layers
+      if (searchSection) searchSection.style.display = "none";
+      if (categoryNav) categoryNav.style.display = "none";
+      if (dashboardSidebar) dashboardSidebar.style.display = "none";
+      if (recentViewedPanel) recentViewedPanel.style.display = "none";
+      
+      const gridLayout = document.getElementById("main-grid-layout");
+      if (gridLayout) gridLayout.style.gridTemplateColumns = "1fr";
+      
+      trackRecentlyViewed(p.id);
+      renderSharedPrompt();
     });
     
     promptsGallery.appendChild(card);
@@ -457,32 +642,51 @@ function renderPrompts() {
 }
 
 // ---------------------------------------------------------
-// SHARE UTILITY (WEB SHARE API WITH CLIPBOARD FALLBACK)
+// DYNAMIC PAGINATION CONTROLLER
 // ---------------------------------------------------------
-function executeSharePrompt(prompt) {
-  const shareUrl = `${window.location.origin}${window.location.pathname}?p=${prompt.id}`;
-  const shareData = {
-    title: `Prompt: ${prompt.title}`,
-    text: prompt.description,
-    url: shareUrl
-  };
+function renderPaginationControls() {
+  if (!paginationContainer || shareModeActive) return;
+  paginationContainer.innerHTML = "";
   
-  // Check if Native browser share is supported and available
-  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-    navigator.share(shareData)
-      .then(() => console.log("Successful native share!"))
-      .catch((error) => {
-        // user cancelled or failed, fallback to clipboard silently
-        console.log("Native share failed/cancelled:", error);
-      });
-  } else {
-    // Fallback to Clipboard Copy
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      showToast("Link Copied!");
-    }).catch(err => {
-      console.error("Share link copy failed:", err);
+  const totalPages = Math.ceil(filteredPrompts.length / CARDS_PER_PAGE);
+  if (totalPages <= 1) return;
+  
+  // Previous button
+  const prevBtn = document.createElement("button");
+  prevBtn.className = "pagination-btn";
+  prevBtn.innerHTML = `&laquo;`;
+  prevBtn.disabled = currentPage === 1;
+  prevBtn.addEventListener("click", () => {
+    currentPage--;
+    applyFiltersAndRender();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  paginationContainer.appendChild(prevBtn);
+  
+  // Page numbers
+  for (let i = 1; i <= totalPages; i++) {
+    const pageBtn = document.createElement("button");
+    pageBtn.className = `pagination-btn ${currentPage === i ? "active" : ""}`;
+    pageBtn.textContent = i;
+    pageBtn.addEventListener("click", () => {
+      currentPage = i;
+      applyFiltersAndRender();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
+    paginationContainer.appendChild(pageBtn);
   }
+  
+  // Next button
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "pagination-btn";
+  nextBtn.innerHTML = `&raquo;`;
+  nextBtn.disabled = currentPage === totalPages;
+  nextBtn.addEventListener("click", () => {
+    currentPage++;
+    applyFiltersAndRender();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  paginationContainer.appendChild(nextBtn);
 }
 
 // ---------------------------------------------------------
@@ -503,19 +707,14 @@ function showToast(message) {
 }
 
 // ---------------------------------------------------------
-// CPM REDIRECTION LOGIC (Trigger exactly every 4 copy actions)
+// CLIPBOARD COPY UTILITY
 // ---------------------------------------------------------
 let copyCounter = parseInt(sessionStorage.getItem("ghor_copy_counter")) || 0;
 
 function triggerCopyRedirection(promptText) {
-  // Execute standard copy
   copyPromptToClipboard(promptText);
-
-  // Increment counter
   copyCounter++;
   sessionStorage.setItem("ghor_copy_counter", copyCounter);
-
-  // If threshold (4) reached, open the ad in a new tab and reset
   if (copyCounter >= 4) {
     copyCounter = 0;
     sessionStorage.setItem("ghor_copy_counter", "0");
@@ -523,12 +722,9 @@ function triggerCopyRedirection(promptText) {
   }
 }
 
-// ---------------------------------------------------------
-// CLIPBOARD COPY UTILITY
-// ---------------------------------------------------------
 function copyPromptToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
-    showToast("Prompt Copied!");
+    showToast("প্রম্পট কপি করা হয়েছে!");
   }).catch(err => {
     console.error("Clipboard copy failed:", err);
   });
@@ -536,3 +732,6 @@ function copyPromptToClipboard(text) {
 
 // Run Init
 window.addEventListener("DOMContentLoaded", init);
+
+
+

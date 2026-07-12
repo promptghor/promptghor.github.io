@@ -1,0 +1,2 @@
+﻿/* Small layout fixes that can be safely loaded independently. */
+#image-preview { display:block; width:100%; max-width:100%; max-height:220px; margin-top:10px; border:1px solid var(--border-color); border-radius:12px; object-fit:contain; background:var(--bg-tertiary); }

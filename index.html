@@ -1,123 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Prompt Ghor // Enterprise Prompt Library</title>
-  <meta name="description" content="A professional and sleek prompt sharing repository. Search, copy, and organize engineering prompts with real-time updates.">
-  <link rel="stylesheet" href="style.css">
-  
-  <!-- Popunder for promptghor.github.io -->
+  <title>Prompt Ghor — Practical AI Prompts</title>
+  <meta name="description" content="A curated library of practical AI prompts in Bangla and English.">
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="fixes.css"><link rel="stylesheet" href="responsive.css">
   <script src="https://pl30278002.effectivecpmnetwork.com/be/9c/52/be9c52e741a4da8662eb1ae24df09646.js"></script>
 </head>
 <body>
-
-  <!-- App Main Layout Container -->
   <div class="app-container">
-    <!-- Corporate Header Area -->
     <header class="corporate-header" id="main-header">
-      <a href="index.html" class="brand-section">
-        <div class="brand-logo-red"></div>
-        <div>
-          <h1 class="corporate-title">PROMPT <span>GHOR</span></h1>
-          <div class="corporate-subtitle">Enterprise Cognitive Asset Repository</div>
-        </div>
-      </a>
-      <div class="actions-section">
-        <!-- Light/Dark Switch Toggle -->
-        <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Light/Dark Theme">
-          <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-          <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-        </button>
-      </div>
+      <a href="index.html" class="brand-section"><div class="brand-logo-red">P</div><div><h1 class="corporate-title">Prompt<span>Ghor</span></h1><div class="corporate-subtitle">Your practical AI prompt library</div></div></a>
+      <div class="actions-section"><button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle theme"><svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg><svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button></div>
     </header>
-
-    <!-- Control Area (Search Input) -->
-    <section class="search-container" id="search-section">
-      <div class="search-icon-wrapper">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      </div>
-      <input type="text" id="prompt-search-input" class="corporate-search-input" placeholder="Search prompts by title, content, or tags..." autocomplete="off">
-    </section>
-
-    <!-- Categories Filters -->
-    <nav class="category-nav" id="category-filters-container" aria-label="Category Navigation">
-      <button class="category-pill active" data-category="ALL" id="cat-tab-all">All Prompts</button>
-      <!-- Dynamically rendering pills -->
-    </nav>
-
-    <!-- Main Workspace Grid -->
-    <main class="dashboard-grid" id="main-grid-layout">
-      <!-- Main Content Column -->
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-        <!-- Native Banner for promptghor.github.io -->
-        <div class="corporate-card" style="padding: 15px; border-radius: 8px;">
+    <section class="hero-shell"><div class="hero-copy"><span class="eyebrow">BUILT FOR BETTER AI WORK</span><h2>Find the right words.<br><em>Make better work.</em></h2><p>A calm, curated collection of prompts you can use, adapt and save for your next task.</p></div><div class="hero-orbit" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span></div></section>
+    <section class="search-container" id="search-section"><div class="search-icon-wrapper">⌕</div><input type="text" id="prompt-search-input" class="corporate-search-input" placeholder="প্রম্পট সার্চ করুন (টাইটেল, ডেসক্রিপশন বা ট্যাগ)..." autocomplete="off"></section>
+    <nav class="category-nav" id="category-filters-container" aria-label="Category Navigation"><button class="category-pill active" data-category="ALL" id="cat-tab-all">সকল প্রম্পট</button></nav>
+    <section class="recent-viewed-panel" id="recent-viewed-panel" style="display:none"><h2 class="recent-viewed-title">সম্প্রতি দেখা প্রম্পটসমূহ</h2><div class="recent-viewed-list" id="recent-viewed-list"></div></section>
+    <main class="dashboard-grid" id="main-grid-layout"><div class="content-column">        <div class="corporate-card" style="padding: 12px; border-radius: 8px; border-color: var(--border-color);">
           <script async="async" data-cfasync="false" src="https://pl30278449.effectivecpmnetwork.com/95e53014e57bfb59868b6d901dc50c58/invoke.js"></script>
           <div id="container-95e53014e57bfb59868b6d901dc50c58"></div>
-        </div>
-
-        <!-- Prompts Gallery List -->
-        <section class="prompts-list" id="prompts-gallery" aria-label="Prompts Gallery">
-          <div class="no-records" id="gallery-loading-placeholder">
-            Loading cognitive assets from database...
-          </div>
-        </section>
-      </div>
-
-      <!-- Sidebar -->
+        </div><div class="content-intro"><span class="eyebrow">EXPLORE THE LIBRARY</span><h2>Fresh prompts for real work</h2></div><section class="prompts-list" id="prompts-gallery" aria-label="Prompts Gallery"><div class="no-records" id="gallery-loading-placeholder">প্রম্পট লোড হচ্ছে...</div></section><div class="pagination-container" id="pagination-container"></div></div>
       <aside class="sidebar-panel" id="dashboard-sidebar">
-        <!-- Tag Filter Widget -->
-        <div class="sidebar-card" id="tags-cloud-widget">
-          <h2 class="sidebar-title">Filter by Tags</h2>
-          <div class="tag-cloud" id="tags-cloud-container">
-            <!-- Dynamically rendering tags -->
-          </div>
-        </div>
-
-        <!-- Database Metrics Widget -->
-        <div class="sidebar-card" id="system-stats-widget">
-          <h2 class="sidebar-title">Database Status</h2>
-          <div class="stat-row">
-            <span class="stat-label">Connection Mode</span>
-            <span class="stat-value" id="stat-connection-state">Active</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Active Prompts</span>
-            <span class="stat-value highlight" id="stat-prompts-count">0</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Total Categories</span>
-            <span class="stat-value" id="stat-categories-count">0</span>
-          </div>
-        </div>
-
-        <!-- Banner 300x250 for promptghor.github.io -->
-        <div class="sidebar-card" id="advertisement-widget" style="display: flex; justify-content: center; align-items: center; padding: 10px;">
-          <script>
-            atOptions = {
-              'key' : '704c6bc4bbbd685eda3b72d0a26fb08b',
-              'format' : 'iframe',
-              'height' : 250,
-              'width' : 300,
-              'params' : {}
-            };
-          </script>
-          <script src="https://www.highperformanceformat.com/704c6bc4bbbd685eda3b72d0a26fb08b/invoke.js"></script>
-        </div>
-      </aside>
+  <div class="sidebar-card" id="advertisement-widget" style="display: flex; justify-content: center; align-items: center; padding: 10px;">
+    <script>
+      atOptions = { 'key' : '704c6bc4bbbd685eda3b72d0a26fb08b', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };
+    </script>
+    <script src="https://www.highperformanceformat.com/704c6bc4bbbd685eda3b72d0a26fb08b/invoke.js"></script>
+  </div>
+</aside>
     </main>
   </div>
-
-  <!-- Clipboard Copy Alert Banner -->
-  <div id="copy-banner" class="copy-banner" role="status">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-    Prompt successfully copied to clipboard!
-  </div>
-
-  <!-- Web Application Scripts -->
-  <script type="module" src="app.js?v=2"></script>
-
-  <!-- Social Bar for promptghor.github.io -->
+  <div id="copy-banner" class="copy-banner" role="status">প্রম্পট কপি করা হয়েছে!</div>
+  <script type="module" src="app.js?v=3"></script>
   <script src="https://pl30278082.effectivecpmnetwork.com/d8/9a/f9/d89af9af0b82c53f4b6e92135829837e.js"></script>
 </body>
 </html>
+
+

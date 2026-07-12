@@ -1,0 +1,59 @@
+﻿/* Mobile-first layout safeguards for Prompt Ghor. */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, canvas { max-width: 100%; }
+
+@media (max-width: 768px) {
+  .app-container { padding: 18px 14px 40px; }
+  .corporate-header { gap: 12px; margin-bottom: 20px; }
+  .brand-section { min-width: 0; }
+  .corporate-title { font-size: 17px; white-space: nowrap; }
+  .brand-logo-red { width: 34px; height: 34px; flex: 0 0 34px; }
+  .hero-shell { min-height: auto; padding: 30px 24px; border-radius: 22px; margin-bottom: 18px; }
+  .hero-copy h2 { font-size: clamp(29px, 9vw, 40px); letter-spacing: -1.8px; }
+  .hero-copy p { font-size: 13px; }
+  .hero-orbit { display: none; }
+  .search-container { margin-bottom: 10px; }
+  .corporate-search-input { min-height: 52px; padding-left: 48px; font-size: 14px; }
+  .category-nav { margin: 0 -14px 8px; padding: 4px 14px 14px; }
+  .category-pill { min-height: 38px; padding: 7px 14px; }
+  .dashboard-grid { display: block; }
+  .prompts-list { grid-template-columns: 1fr; gap: 13px; }
+  .corporate-card { padding: 16px; }
+  .card-image-header { height: 190px; object-fit: cover; }
+  .card-title { font-size: 17px; }
+  .card-actions, .detail-actions { gap: 8px; }
+  .btn-corporate { min-height: 46px; font-size: 13px; }
+  .btn-square { flex-basis: 46px; width: 46px; }
+  .sidebar-panel { display: block; margin-top: 18px; }
+  #advertisement-widget { width: 100%; min-height: 270px; overflow: hidden; }
+  #advertisement-widget iframe { max-width: 100% !important; }
+  .content-column > .corporate-card { width: 100%; max-width: 100%; overflow: hidden; }
+  .content-column > .corporate-card iframe { max-width: 100% !important; }
+  .recent-viewed-list { padding-bottom: 8px; }
+  .recent-card { min-width: 166px; }
+  .prompt-detail-card { padding: 18px; border-radius: 16px; }
+  .detail-title { font-size: 26px; }
+  .detail-prompt-block { padding: 15px; overflow-x: auto; }
+  .detail-prompt-text { font-size: 12px; }
+
+  .admin-welcome { padding: 25px 21px; border-radius: 20px; }
+  .admin-welcome h2 { font-size: 26px; }
+  .admin-grid { display: block; }
+  .admin-form-panel, .admin-list-panel { padding: 16px; border-radius: 16px; }
+  .admin-list-panel { margin-top: 15px; }
+  .form-input { min-height: 44px; font-size: 16px; }
+  textarea.form-input { min-height: auto; }
+  .form-actions-group { flex-wrap: wrap; }
+  .form-actions-group .btn-corporate { flex: 1 1 150px; }
+  .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .corporate-table { min-width: 620px; }
+  #image-preview { max-height: 190px; }
+}
+
+@media (max-width: 380px) {
+  .actions-section { gap: 5px; }
+  .theme-toggle-btn { width: 38px; height: 38px; }
+  .hero-shell { padding: 26px 19px; }
+  .card-actions { flex-wrap: wrap; }
+  .card-actions .copy-button { flex: 1 1 calc(100% - 54px); }
+}
